@@ -51,7 +51,7 @@ class ImageTransformer(object):
         # Get projection matrix
         mat = self.get_M(rtheta, rphi, rgamma, dx, dy, dz)
         
-        return cv2.warpPerspective(self.image.copy(), mat, (self.width, self.height))
+        return cv2.warpPerspective(self.image.copy(), mat, (self.width, self.height),borderMode=cv2.BORDER_CONSTANT,borderValue=(255,255,255))
 
 
     """ Get Perspective Projection Matrix """
