@@ -1,12 +1,11 @@
 import numpy as np
 import cv2 as cv
-import argparse as ag
 import random
-import sys
-import ConfigParser
+import configparser
 import os
 import glob
 import utility
+import csv
 
 from BackgroundFileInterface  import BackgroundFileLoader
 from SampleImgInterface import SampImgModifier
@@ -29,46 +28,37 @@ DEFAULT_PARAMS={
 'OutputPath':'./Data/GermanFlag/TrainingData'
 }
 
-def placeDistortedSample(maskImg,outImg,bkgImg):
+def placeDistortedSample(outImgTight,foregroundPixTight,BoundRect,bkgImg,):
 
     bgHeight, bgWidth, _ = np.shape(bkgImg)
-    foregrndPix = (np.where(maskImg == 0))
-    BoundRect = utility.getTheBoundRect(foregrndPix)
+    outHeight,outWidth,_ = np.shape(outImgTight)
+    finalImg=bkgImg
 
-    outImgTight = outImg[BoundRect[0][0]:(BoundRect[1][0] + 1), BoundRect[0][1]:(BoundRect[1][1] + 1)]
+    posX = np.random.randint(0,bgWidth-outWidth)
+    if (posX + outWidth > bgWidth):
+        posX = bgWidth - outWidth - 10
 
-    maskHeight = BoundRect[1][0] - BoundRect[0][0] + 1
-    maskWidth = BoundRect[1][1] - BoundRect[0][1] + 1
+    posY = np.random.randint(0,bgHeight-10)
+    if (posY + outHeight > bgHeight-outHeight):
+        posY = bgHeight - outHeight - 10
 
-    maskImgTight = np.zeros((maskHeight, maskWidth), np.uint8)
+    indices=np.zeros((np.shape(foregroundPixTight)),np.uint64)
+    indices[0] = np.array([foregroundPixTight[0]]) + posY
+    indices[1] = np.array([foregroundPixTight[1]]) + posX
 
-    indices = [foregrndPix[0], foregrndPix[1]]
+    boundRectFin =np.zeros((2,2),float)
+    boundRectFin[1][0] = float(BoundRect[1][0]-BoundRect[0][0] + posY)/float(bgHeight)
+    boundRectFin[1][1] = float(BoundRect[1][1] - BoundRect[0][1] + posX)/float(bgWidth)
+    boundRectFin[0][0] = float(posY)/float(bgHeight)
+    boundRectFin[0][1] = float(posX)/float(bgWidth)
 
-    indices[0] = indices[0] - BoundRect[0][0]
-    indices[1] = indices[1] - BoundRect[0][1]
-
-    foregroundPixTight = tuple(map(tuple, indices))
-
-    maskImgTight[foregroundPixTight] = 255
-
-    posX = random.randint(0, bgWidth - 2)
-    if (posX + maskWidth > bgWidth):
-        posX = bgWidth - maskWidth - 10
-
-    posY = random.randint(0, bgHeight - 2)
-    if (posY + maskHeight > bgHeight):
-        posY = bgHeight - maskHeight - 10
-
-    indices[0] = indices[0] + posY
-    indices[1] = indices[1] + posX
 
     foregroundpixBkg = tuple(map(tuple, indices))
-
-    bkgImg[foregroundpixBkg] = outImgTight[foregroundPixTight]
-
+    finalImg[foregroundpixBkg] = outImgTight[foregroundPixTight]
+    return finalImg,boundRectFin
 def main():
 
-    parser=ConfigParser.RawConfigParser(defaults=DEFAULT_PARAMS)
+    parser=configparser.RawConfigParser(defaults=DEFAULT_PARAMS)
     parser.read('Parameters.config')
 
 
@@ -91,7 +81,10 @@ def main():
 
     bkgFileLoader=BackgroundFileLoader()
     bkgFileLoader.loadbkgFiles(backgroundFilePath)
-    for sampleImgPath in glob.glob(os.path.join(samplePath,'*')):
+    for sampleImgName in os.listdir(samplePath):
+
+        filename=os.path.splitext(sampleImgName)[0]
+        sampleImgPath=os.path.join(samplePath,sampleImgName)
         sampleImg=cv.imread(sampleImgPath)
         dimensions=np.shape(sampleImg)
         count=0
@@ -101,12 +94,12 @@ def main():
 
         while(count<300):
 
-            GaussianNoiseFlag=np.less(np.random.uniform(0, 1),GaussianNoiseProb)
-            MedianNoiseFlag = np.less(np.random.uniform(0, 1),MedianNoiseProb)
-            SharpenFlag = np.less(np.random.uniform(0, 1),SharpenProb)
-            PersTransFlag=np.less(np.random.uniform(0, 1),PerspTransProb)
-            ScalingFlag = np.less(np.random.uniform(0, 1), SharpenProb)
-            bkgIndex=np.random.uniform(0,len(bkgFileLoader.bkgImgList))
+            bkgImg=bkgFileLoader.bkgImgList[np.random.randint(0,bkgFileLoader.count)]
+            GaussianNoiseFlag  = np.less(np.random.uniform(0, 1),GaussianNoiseProb)
+            MedianNoiseFlag    = np.less(np.random.uniform(0, 1),MedianNoiseProb)
+            SharpenFlag        = np.less(np.random.uniform(0, 1),SharpenProb)
+            PersTransFlag      = np.less(np.random.uniform(0, 1),PerspTransProb)
+            ScalingFlag        = np.less(np.random.uniform(0, 1), SharpenProb)
 
             if (PersTransFlag):
                ImgModifier.perspectiveTransform(maxXangle_Persp,maxYangle_Persp,maxZangle_Persp,bgColor,bgThresh)
@@ -118,18 +111,22 @@ def main():
             if(SharpenFlag):
                 ImgModifier.sharpenImage()
 
-           # if (ScalingFlag):
+            # if (ScalingFlag):
 
+
+
+            foregroundPixTight, outImgTight,BoundRect = ImgModifier.getTightBoundbox()
+            finalImg,finalBoundRect= placeDistortedSample(outImgTight,foregroundPixTight,BoundRect, bkgImg)
+            outputName= filename + '_'+ str(count)
+
+            cv.imwrite(os.path.join(outputfolder,str(outputName + '.jpg')),finalImg)
+            with open(os.path.join(outputfolder,str(outputName + '.txt')),'w') as f:
+                csv_writer = csv.writer(f)
+                details=list(['0'])+list(np.reshape(finalBoundRect,4).astype(np.str))
+                csv_writer.writerow(details)
 
             cv.imshow("input", ImgModifier.image)
-            cv.imshow("output", ImgModifier.modifiedImg)
-
-
-            bgHeight, bgWidth, _ = np.shape(bkgImg)
-            placeDistortedSample(maskImg, modifiedImg, bkgImg)
-
-
-            #cv.imshow("mask", maskImg)
+            cv.imshow("output", finalImg)
             cv.waitKey(100000)
             count=count+1
             ImgModifier.resetFlags()

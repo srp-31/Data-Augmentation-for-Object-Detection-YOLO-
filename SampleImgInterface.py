@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 from image_transformer import ImageTransformer
+import utility
 
 class SampImgModifier:
     def __init__(self,image,size,lower,upper):
@@ -53,9 +54,30 @@ class SampImgModifier:
 
         cv.waitKey(100000)
 
+    def getTightBoundbox(self):
+        foregrndPix = (np.where(self.maskImage == 0))
+        boundRect = utility.getTheBoundRect(foregrndPix)
+
+        outImgTight = self.modifiedImg[boundRect[0][0]:(boundRect[1][0]+1 ), boundRect[0][1]:(boundRect[1][1]+1 )]
+
+        maskTightHeight = boundRect[1][0] - boundRect[0][0] + 1
+        maskTightWidth = boundRect[1][1] - boundRect[0][1] + 1
+
+        maskImgTight = np.zeros((maskTightHeight, maskTightWidth), np.uint8)
+
+        indices = [foregrndPix[0], foregrndPix[1]]
+
+        indices[0] = indices[0] - boundRect[0][0]
+        indices[1] = indices[1] - boundRect[0][1]
+
+        foregroundPixTight = tuple(map(np.array, indices))
+        maskImgTight[foregroundPixTight] = 255
+        return foregroundPixTight,outImgTight,boundRect
+
     def resetFlags(self):
         self.modifiedFlag=0
         self.maskImage=np.zeros((self.height,self.width,self.channels),np.uint8)
+
 
     #def addMedianNoise:
 
