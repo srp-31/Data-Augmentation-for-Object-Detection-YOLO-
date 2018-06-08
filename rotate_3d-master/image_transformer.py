@@ -37,7 +37,7 @@ class ImageTransformer(object):
 
 
     """ Wrapper of Rotating a Image """
-    def rotate_along_axis(self, theta=0, phi=0, gamma=0, dx=0, dy=0, dz=0):
+    def rotate_along_axis(self, theta=0, phi=0, gamma=0, dx=0, dy=0, dz=0,bgColor=255):
         
         # Get radius of rotation along 3 axes
         rtheta, rphi, rgamma = get_rad(theta, phi, gamma)
@@ -51,7 +51,7 @@ class ImageTransformer(object):
         # Get projection matrix
         mat = self.get_M(rtheta, rphi, rgamma, dx, dy, dz)
         
-        return cv2.warpPerspective(self.image.copy(), mat, (self.width, self.height),borderMode=cv2.BORDER_CONSTANT,borderValue=(255,255,255))
+        return cv2.warpPerspective(self.image.copy(), mat, (self.height, self.width),borderMode=cv2.BORDER_CONSTANT,borderValue=(bgColor,bgColor,bgColor))
 
 
     """ Get Perspective Projection Matrix """

@@ -10,7 +10,7 @@ class BackgroundFileLoader(object):
         self.count=0
 
     def loadbkgFiles(self,bkgfilepath):
-        for name in glob.glob(os.path.join(bkgfilepath,"*")):
+        for name in glob.glob(os.path.join(bkgfilepath,"*.jpg")):
             self.bkgImgList.append(cv.imread(name))
             self.count=self.count+1
 
