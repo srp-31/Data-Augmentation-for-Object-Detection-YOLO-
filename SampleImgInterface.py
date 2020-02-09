@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 as cv
-from image_transformer import ImageTransformer
+from rotate_3d_master.image_transformer import ImageTransformer
 import utility
 import sys
 import random
@@ -191,7 +191,3 @@ class SampImgModifier:
         self.modifiedFlag=0
         self.modifiedImg = np.copy(self.image)
         self.maskImage=self.maskImage=cv.inRange(self.image,self.lower,self.upper)
-
-
-
-
