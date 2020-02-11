@@ -1,8 +1,8 @@
-from util import *
+from rotate_3d_master.util import *
 import numpy as np
 import cv2
 
-# Usage: 
+# Usage:
 #     Change main function with ideal arguments
 #     Then
 #     from image_tranformer import ImageTransformer
@@ -19,7 +19,7 @@ import cv2
 #
 # Output:
 #     image     : the rotated image
-# 
+#
 # Reference:
 #     1.        : http://stackoverflow.com/questions/17087446/how-to-calculate-perspective-transform-for-opencv-from-rotation-angles
 #     2.        : http://jepsonsblog.blogspot.tw/2012/11/rotation-in-3d-using-opencvs.html
@@ -38,10 +38,10 @@ class ImageTransformer(object):
 
     """ Wrapper of Rotating a Image """
     def rotate_along_axis(self, theta=0, phi=0, gamma=0, dx=0, dy=0, dz=0,bgColor=255):
-        
+
         # Get radius of rotation along 3 axes
         rtheta, rphi, rgamma = get_rad(theta, phi, gamma)
-        
+
         # Get ideal focal length on z axis
         # NOTE: Change this section to other axis if needed
         d = np.sqrt(self.height**2 + self.width**2)
@@ -50,13 +50,13 @@ class ImageTransformer(object):
 
         # Get projection matrix
         mat = self.get_M(rtheta, rphi, rgamma, dx, dy, dz)
-        
+
         return cv2.warpPerspective(self.image.copy(), mat, (self.height, self.width),borderMode=cv2.BORDER_CONSTANT,borderValue=(bgColor,bgColor,bgColor))
 
 
     """ Get Perspective Projection Matrix """
     def get_M(self, theta, phi, gamma, dx, dy, dz):
-        
+
         w = self.width
         h = self.height
         f = self.focal
@@ -66,18 +66,18 @@ class ImageTransformer(object):
                         [0, 1, -h/2],
                         [0, 0, 1],
                         [0, 0, 1]])
-        
+
         # Rotation matrices around the X, Y, and Z axis
         RX = np.array([ [1, 0, 0, 0],
                         [0, np.cos(theta), -np.sin(theta), 0],
                         [0, np.sin(theta), np.cos(theta), 0],
                         [0, 0, 0, 1]])
-        
+
         RY = np.array([ [np.cos(phi), 0, -np.sin(phi), 0],
                         [0, 1, 0, 0],
                         [np.sin(phi), 0, np.cos(phi), 0],
                         [0, 0, 0, 1]])
-        
+
         RZ = np.array([ [np.cos(gamma), -np.sin(gamma), 0, 0],
                         [np.sin(gamma), np.cos(gamma), 0, 0],
                         [0, 0, 1, 0],
@@ -99,4 +99,3 @@ class ImageTransformer(object):
 
         # Final transformation matrix
         return np.dot(A2, np.dot(T, np.dot(R, A1)))
-
