@@ -1,3 +1,5 @@
-
+#Python byte code
 *.pyc
-.idea/
+
+#Pycharm files
+.idea
