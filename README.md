@@ -16,7 +16,7 @@ The starting point for  using the library is the [CreateSamples](data_augmentati
 # Basic example
 Object                                         |  Background                                        |           Combined               |
 -----------------------------------------------|----------------------------------------------------|----------------------------------|
-<img src="Data/Example/Object.jpg" width=200>  |  <img src="Data/Example/Background.jpg" width=200> |   <img src="Data/Example/Combined.jpg" width=200> |
+<img src="data/example/Object.jpg" width=200>  |  <img src="data/example/Background.jpg" width=200> |   <img src="data/example/Combined.jpg" width=200> |
 
 SUGGESTION: As sample images it is good to use images where there are a couple of rows and columns of white/black pixels padding the object. These will help in reducing the cropping of the object during rotation.
 
