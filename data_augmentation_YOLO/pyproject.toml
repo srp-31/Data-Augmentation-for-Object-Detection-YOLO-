@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "data_augmentation_YOLO"
+version = "0.1.0"
+description = "This package/application is used to augment data used for yolo. With a few images of the target object and collection of background images this package can be used to generate artificial images for training YOLO object detector."
+authors = ["srp-31 <srp@tier.app>"]
+
+[tool.poetry.dependencies]
+python = "^3.5"
+opencv-python = "^4.2.0"
+numpy = "^1.18.4"
+PyYAML = "^5.3.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
