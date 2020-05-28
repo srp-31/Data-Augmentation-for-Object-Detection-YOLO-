@@ -4,9 +4,9 @@ import os
 import glob
 import yaml
 import logging
-from data_augmentation_YOLO.bkg_files_loader import BackgroundFileLoader
-from data_augmentation_YOLO.image_transformer import SampleImgTransformer
-from data_augmentation_YOLO.config import get_console_handler, get_file_handler
+from bkg_files_loader import BackgroundFileLoader
+from image_transformer import SampleImgTransformer
+from config import get_console_handler, get_file_handler
 
 
 def place_distorted_sample(outImgTight, foregroundPixTight, BoundRect, bkgImg):
@@ -73,10 +73,12 @@ def augment_data():
     if not (os.path.isdir(outputfolder)):
         os.makedirs(outputfolder)
 
-    log_file_path = outputfolder + "data_augmentation_YOLO.log"
+    log_file_path = outputfolder + "/data_augmentation_YOLO.log"
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
     logger.addHandler(get_file_handler(log_file_path))
     logger.addHandler(get_console_handler())
+    logger.INFO("logger created")
     bkgFileLoader = BackgroundFileLoader()
     bkgFileLoader.loadbkgFiles(backgroundFilePath)
 
@@ -166,15 +168,8 @@ def augment_data():
                         + "\n"
                     )
                     f.write(details)
+                logger.log(logging.INFO, "%s augmented file created", outputName)
                 count = count + 1
-            else:
-                outputName = filename + "_" + str(count)
-                cv.imwrite(
-                    os.path.join(outputfolder, str(outputName + ".jpg")),
-                    ImgModifier.modified_image,
-                )
-                # cv.imshow("modified",ImgModifier.modifiedImg)
-                cv.waitKey(100)
 
             ImgModifier.resetFlags()
 

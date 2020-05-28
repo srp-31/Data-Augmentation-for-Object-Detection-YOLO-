@@ -1,12 +1,15 @@
 import numpy as np
 import cv2 as cv
-from data_augmentation_YOLO import util
+import util
 import random
+import logging
 
 
 DISP_X = 25
 DISP_Y = -25
 PADDING = 50
+
+logger = logging.getLogger(__name__)
 
 
 class SampleImgTransformer:

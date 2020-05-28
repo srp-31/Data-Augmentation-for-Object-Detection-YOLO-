@@ -141,3 +141,6 @@ cython_debug/
 
 #Pycharm files
 .idea
+
+#CreatedFiles
+./GermanFlag/augmentedFiles
