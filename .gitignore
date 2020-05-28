@@ -143,4 +143,4 @@ cython_debug/
 .idea
 
 #CreatedFiles
-./data/GermanFlag/*/
+/augmentedFiles
