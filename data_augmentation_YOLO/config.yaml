@@ -1,6 +1,6 @@
-BACKGROUND_FILE_PATH: "./Data/background/original"
-SAMPLE_FILES_PATH: "./Data/GermanFlag"
-OUTPUT_PATH: "./Data/GermanFlag/TrainingDataComplex2"
+BACKGROUND_FILE_PATH: "../data/background/original"
+SAMPLE_FILES_PATH: "../data/GermanFlag"
+OUTPUT_PATH: "../data/GermanFlag/augmentedFiles"
 BACKGROUND_COLOR : 255
 BACKGROUND_THRESH : 8
 MAX_X_ANGLE: 30

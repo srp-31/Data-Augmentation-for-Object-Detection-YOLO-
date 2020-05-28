@@ -3,11 +3,13 @@ import cv2 as cv
 import os
 import glob
 import yaml
+import logging
 from data_augmentation_YOLO.bkg_files_loader import BackgroundFileLoader
 from data_augmentation_YOLO.image_transformer import SampleImgTransformer
+from data_augmentation_YOLO.config import get_console_handler, get_file_handler
 
 
-def placeDistortedSample(outImgTight, foregroundPixTight, BoundRect, bkgImg):
+def place_distorted_sample(outImgTight, foregroundPixTight, BoundRect, bkgImg):
 
     bgHeight, bgWidth, _ = np.shape(bkgImg)
     outHeight, outWidth, _ = np.shape(outImgTight)
@@ -46,7 +48,7 @@ def placeDistortedSample(outImgTight, foregroundPixTight, BoundRect, bkgImg):
         return False, 0, 0
 
 
-def main():
+def augment_data():
     with open("config.yaml") as fp:
         config_params = yaml.load(fp, Loader=yaml.FullLoader)
 
@@ -59,20 +61,25 @@ def main():
     maxYangle_Persp = config_params.get("MAX_Y_ANGLE")
     maxZangle_Persp = config_params.get("MAX_Z_ANGLE")
     maxAngle_Affine = config_params.get("MAX_AFFINE_ANGLE")
-    PerspTransProb = config_params.get("PERSP_TRANS_PROB")
-    AffineRotateProb = config_params.get("AFFINE_ROT_PROB")
-    GaussianNoiseProb = config_params.get("GAUSS_NOISE_PROB")
-    MedianNoiseProb = config_params.get("MEDIAN_NOISE_PROB")
-    SharpenProb = config_params.get("SHARPEN_PROB")
-    ScalingProb = config_params.get("SCALING_PROB")
-    BrightnesProb = config_params.get("BRIGHTNESS_PROB")
-    outputPerSample = config_params.get("OUTPUT_PER_SAMPLE")
+    persp_trans_prob = config_params.get("PERSP_TRANS_PROB")
+    aff_rot_prob = config_params.get("AFFINE_ROT_PROB")
+    gauss_noise_prob = config_params.get("GAUSS_NOISE_PROB")
+    median_noise_prob = config_params.get("MEDIAN_NOISE_PROB")
+    sharpen_prob = config_params.get("SHARPEN_PROB")
+    scaling_prob = config_params.get("SCALING_PROB")
+    brightness_prob = config_params.get("BRIGHTNESS_PROB")
+    output_per_sample = config_params.get("OUTPUT_PER_SAMPLE")
 
     if not (os.path.isdir(outputfolder)):
         os.makedirs(outputfolder)
 
+    log_file_path = outputfolder + "data_augmentation_YOLO.log"
+    logger = logging.getLogger(__name__)
+    logger.addHandler(get_file_handler(log_file_path))
+    logger.addHandler(get_console_handler())
     bkgFileLoader = BackgroundFileLoader()
     bkgFileLoader.loadbkgFiles(backgroundFilePath)
+
     for sampleImgPath in glob.glob(os.path.join(samplePath, "*.jpg")):
 
         filenameWithExt = os.path.split(sampleImgPath)[1]
@@ -84,55 +91,64 @@ def main():
         count = 0
         lower = np.array([bgColor - bgThresh, bgColor - bgThresh, bgColor - bgThresh])
         upper = np.array([bgColor + bgThresh, bgColor + bgThresh, bgColor + bgThresh])
-        ImgModifier = SampleImgTransformer(sampleImg, dimensions, lower, upper, bgColor)
+        ImgModifier = SampleImgTransformer(
+            image=sampleImg, size=dimensions, lower=lower, upper=upper, bgcolor=bgColor
+        )
 
-        while count < outputPerSample:
+        while count < output_per_sample:
 
-            bkgImg = bkgFileLoader.bkgImgList[np.random.randint(0, bkgFileLoader.count)]
-            GaussianNoiseFlag = np.less(np.random.uniform(0, 1), GaussianNoiseProb)
-            MedianNoiseFlag = np.less(np.random.uniform(0, 1), MedianNoiseProb)
-            SharpenFlag = np.less(np.random.uniform(0, 1), SharpenProb)
-            PersTransFlag = np.less(np.random.uniformpyyaml(0, 1), PerspTransProb)
-            ScalingFlag = np.less(np.random.uniform(0, 1), ScalingProb)
-            BrightnessFlag = np.less(np.random.uniform(0, 1), BrightnesProb)
-            AffineRotateFlag = np.less(np.random.uniform(0, 1), AffineRotateProb)
+            bkg_img = bkgFileLoader.bkgImgList[
+                np.random.randint(0, bkgFileLoader.count)
+            ]
+            gauss_noise_flag = np.less(np.random.uniform(0, 1), gauss_noise_prob)
+            median_noise_flag = np.less(np.random.uniform(0, 1), median_noise_prob)
+            sharpen_flag = np.less(np.random.uniform(0, 1), sharpen_prob)
+            pers_trans_flag = np.less(np.random.uniform(0, 1), persp_trans_prob)
+            scaling_flag = np.less(np.random.uniform(0, 1), scaling_prob)
+            brightness_flag = np.less(np.random.uniform(0, 1), brightness_prob)
+            affine_rot_flag = np.less(np.random.uniform(0, 1), aff_rot_prob)
 
-            if PersTransFlag:
+            if pers_trans_flag:
                 ImgModifier.perspectiveTransform(
-                    maxXangle_Persp, maxYangle_Persp, maxZangle_Persp, bgColor
+                    maxXangle=maxXangle_Persp,
+                    maxYangle=maxYangle_Persp,
+                    maxZangle=maxZangle_Persp,
+                    bgColor=bgColor,
                 )
 
-            if AffineRotateFlag and not PersTransFlag:
-                ImgModifier.affineRotate(maxAngle_Affine, bgColor)
+            if affine_rot_flag and not pers_trans_flag:
+                ImgModifier.affineRotate(maxXangle=maxAngle_Affine, bgColor=bgColor)
 
-            if GaussianNoiseFlag:
-                ImgModifier.addGaussianNoise(0, 2)
+            if gauss_noise_flag:
+                ImgModifier.addGaussianNoise(noiseMean=0, noiseVariance=2)
 
-            if MedianNoiseFlag and not GaussianNoiseFlag:
-                percentPixels = 0.02
-                percentSalt = 0.5
-                ImgModifier.addMedianNoise(percentPixels, percentSalt)
+            if median_noise_flag and not gauss_noise_flag:
+                percent_pixels = 0.02
+                percent_salt = 0.5
+                ImgModifier.addMedianNoise(
+                    percentPixel=percent_pixels, percentSalt=percent_salt
+                )
 
-            if SharpenFlag and not (MedianNoiseFlag) and not (GaussianNoiseFlag):
+            if sharpen_flag and not (median_noise_flag) and not (gauss_noise_flag):
                 ImgModifier.sharpenImage()
 
-            if ScalingFlag:
+            if scaling_flag:
                 scale = np.random.uniform(0.5, 1.5)
-                ImgModifier.scaleImage(scale)
+                ImgModifier.scaleImage(scale=scale)
 
             if (
-                BrightnessFlag
-                and not (SharpenFlag)
-                and not (MedianNoiseFlag)
-                and not (GaussianNoiseFlag)
+                brightness_flag
+                and not (sharpen_flag)
+                and not (median_noise_flag)
+                and not (gauss_noise_flag)
             ):
                 scale = np.random.uniform(0.5, 1)
-                ImgModifier.modifybrightness(scale)
+                ImgModifier.modifybrightness(scale=scale)
 
             foregroundPixTight, outImgTight, BoundRect = ImgModifier.getTightBoundbox()
 
-            flag, finalImg, finalBoundRect = placeDistortedSample(
-                outImgTight, foregroundPixTight, BoundRect, bkgImg
+            flag, finalImg, finalBoundRect = place_distorted_sample(
+                outImgTight, foregroundPixTight, BoundRect, bkg_img
             )
             if flag:
                 outputName = filename + "_" + str(count)
@@ -164,4 +180,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    augment_data()

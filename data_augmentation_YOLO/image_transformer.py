@@ -3,13 +3,14 @@ import cv2 as cv
 from data_augmentation_YOLO import util
 import random
 
+
 DISP_X = 25
 DISP_Y = -25
 PADDING = 50
 
 
 class SampleImgTransformer:
-    def __init__(self, image, size, lower, upper, bgcolor):
+    def __init__(self, *, image, size, lower, upper, bgcolor):
         self.height = size[0] + PADDING * 2
         self.width = size[1] + PADDING * 2
         self.channels = size[2]
@@ -25,7 +26,8 @@ class SampleImgTransformer:
         self.mask_image = cv.inRange(self.image, lower, upper)
         self.modified_image = np.copy(self.image)
 
-    def addGaussianNoise(self, noiseMean, noiseVariance):
+    def addGaussianNoise(self, *, noiseMean, noiseVariance) -> None:
+        """Adds Gaussian Noise to the image with a given mean and variance"""
         noiseSigma = noiseVariance ** 0.5
         foregrndPix = np.where(self.mask_image == 0)
 
@@ -47,7 +49,9 @@ class SampleImgTransformer:
         )
         self.modified_image = np.uint8(self.modified_image)
 
-    def addMedianNoise(self, percentPixel, percentSalt):
+    def addMedianNoise(self, *, percentPixel, percentSalt) -> None:
+        """Adds Median Noise to the image. The percentPixel is the percentage of the total pixels to b corrupted.
+        The percentSalt accepts the percentage of corrupted pixel to be made white.Remaining will eb black."""
         foregroundPix = np.where(self.mask_image == 0)
         s = np.size(foregroundPix) / 2
         numPixels = int(percentPixel * s)
@@ -68,7 +72,7 @@ class SampleImgTransformer:
         self.modified_image[salt_pixels] = [255, 255, 255]
         self.modified_image[pepper_pixels] = [0, 0, 0]
 
-    def affineRotate(self, maxXangle, bgColor=255):
+    def affineRotate(self, *, maxXangle, bgColor=255) -> None:
 
         angle = np.random.uniform(-maxXangle, maxXangle)
         if self.modified_flag == 1:
@@ -102,7 +106,7 @@ class SampleImgTransformer:
 
     """ Get Perspective Projection Matrix """
 
-    def get_M(self, theta, phi, gamma, dx, dy, dz):
+    def get_M(self, *, theta, phi, gamma, dx, dy, dz):
 
         w = self.width
         h = self.height
@@ -151,7 +155,7 @@ class SampleImgTransformer:
         # Final transformation matrix
         return np.dot(A2, np.dot(T, np.dot(R, A1)))
 
-    def perspectiveTransform(self, maxXangle, maxYangle, maxZangle, bgColor=255):
+    def perspectiveTransform(self, *, maxXangle, maxYangle, maxZangle, bgColor=255):
 
         angX = np.random.uniform(-maxXangle, maxXangle)
         angY = np.random.uniform(-maxYangle, maxYangle)
@@ -163,7 +167,9 @@ class SampleImgTransformer:
         self.focal = d / (2 * np.sin(rgamma) if np.sin(rgamma) != 0 else 1)
         dz = self.focal
 
-        mat = self.get_M(rtheta, rphi, rgamma, DISP_X, DISP_Y, dz)
+        mat = self.get_M(
+            theta=rtheta, phi=rphi, gamma=rgamma, dx=DISP_X, dy=DISP_Y, dz=dz
+        )
 
         if self.modified_flag == 1:
             self.modified_image = cv.warpPerspective(
@@ -196,7 +202,7 @@ class SampleImgTransformer:
             self.modified_image = cv.filter2D(self.image, -1, kernel)
             self.modified_flag = 1
 
-    def scaleImage(self, scale):
+    def scaleImage(self, *, scale):
         if self.modified_flag == 1:
             self.modified_image = cv.resize(
                 self.modified_image, None, fx=scale, fy=scale
@@ -208,7 +214,7 @@ class SampleImgTransformer:
 
         self.mask_image = cv.inRange(self.modified_image, self.lower, self.upper)
 
-    def modifybrightness(self, scale, percent=1):
+    def modifybrightness(self, *, scale, percent=1):
         foregroundPix = np.where(self.mask_image == 0)
         s = int(np.size(foregroundPix) / 2)
         rand_indices = np.array(range(0, s))
