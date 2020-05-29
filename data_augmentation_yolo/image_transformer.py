@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 as cv
-import util
+import data_augmentation_yolo.util as util
 import random
 import logging
 
@@ -13,20 +13,25 @@ logger = logging.getLogger(__name__)
 
 
 class SampleImgTransformer:
-    def __init__(self, *, image, size, lower, upper, bgcolor):
+    def __init__(self, *, image, bg_color, bg_thresh):
+        size = np.shape(image)
         self.height = size[0] + PADDING * 2
         self.width = size[1] + PADDING * 2
         self.channels = size[2]
-        self.image = bgcolor * np.ones(
+        self.image = bg_color * np.ones(
             (self.height, self.width, self.channels), np.uint8
         )
         self.image[
             PADDING : (self.height - PADDING), PADDING : (self.width - PADDING)
         ] = np.copy(image[0 : size[0], 0 : size[1]])
         self.modified_flag = 0
-        self.lower = lower
-        self.upper = upper
-        self.mask_image = cv.inRange(self.image, lower, upper)
+        self.lower = np.array(
+            [bg_color - bg_thresh, bg_color - bg_thresh, bg_color - bg_thresh]
+        )
+        self.upper = np.array(
+            [bg_color + bg_thresh, bg_color + bg_thresh, bg_color + bg_thresh]
+        )
+        self.mask_image = cv.inRange(self.image, self.lower, self.upper)
         self.modified_image = np.copy(self.image)
 
     def addGaussianNoise(self, *, noiseMean, noiseVariance) -> None:
@@ -50,7 +55,6 @@ class SampleImgTransformer:
         self.modified_image[foregrndPix] = (
             self.modified_image[foregrndPix] + gaussImg[foregrndPix]
         )
-        self.modified_image = np.uint8(self.modified_image)
 
     def addMedianNoise(self, *, percentPixel, percentSalt) -> None:
         """Adds Median Noise to the image. The percentPixel is the percentage of the total pixels to b corrupted.
@@ -66,8 +70,8 @@ class SampleImgTransformer:
         indices[0] = np.array([foregroundPix[0]])
         indices[1] = np.array([foregroundPix[1]])
         salt_pixels = tuple(map(tuple, indices[:, allCoord[0:salt_end]]))
-        pepper_pixels = tuple(map(tuple, indices[:, allCoord[0:salt_end]]))
-
+        pepper_pixels = tuple(map(tuple, indices[:, allCoord[salt_end:numPixels]]))
+        print(len(salt_pixels), len(salt_pixels))
         if not self.modified_flag == 1:
             self.modified_image = np.copy(self.image)
             self.modified_flag = 1
@@ -241,6 +245,8 @@ class SampleImgTransformer:
         cv.waitKey(1000)
 
     def getTightBoundbox(self):
+        cv.imshow("maskImage", self.mask_image)
+        cv.waitKey(1000)
         foregrndPix = np.where(self.mask_image == 0)
         boundRect = util.getTheBoundRect(foregrndPix)
         outImgTight = self.modified_image[

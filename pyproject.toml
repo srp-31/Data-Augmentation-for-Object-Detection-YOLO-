@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "data_augmentation_YOLO"
+name = "data_augmentation_yolo"
 version = "0.1.0"
 description = "This package/application is used to augment data used for yolo. With a few images of the target object and collection of background images this package can be used to generate artificial images for training YOLO object detector."
 authors = ["srp-31 <srp@tier.app>"]

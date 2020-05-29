@@ -4,9 +4,9 @@ import os
 import glob
 import yaml
 import logging
-from bkg_files_loader import BackgroundFileLoader
-from image_transformer import SampleImgTransformer
-from config import get_console_handler, get_file_handler
+from data_augmentation_yolo.bkg_files_loader import BackgroundFileLoader
+from data_augmentation_yolo.image_transformer import SampleImgTransformer
+from data_augmentation_yolo.config import get_console_handler, get_file_handler
 
 
 def place_distorted_sample(outImgTight, foregroundPixTight, BoundRect, bkgImg):
@@ -73,12 +73,12 @@ def augment_data():
     if not (os.path.isdir(outputfolder)):
         os.makedirs(outputfolder)
 
-    log_file_path = outputfolder + "/data_augmentation_YOLO.log"
+    log_file_path = outputfolder + "/data_augmentation_yolo.log"
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     logger.addHandler(get_file_handler(log_file_path))
     logger.addHandler(get_console_handler())
-    logger.INFO("logger created")
+    logger.info("logger created")
     bkgFileLoader = BackgroundFileLoader()
     bkgFileLoader.loadbkgFiles(backgroundFilePath)
 
@@ -88,13 +88,11 @@ def augment_data():
         filename = os.path.splitext(filenameWithExt)[0]
 
         sampleImg = cv.imread(sampleImgPath)
-        dimensions = np.shape(sampleImg)
 
         count = 0
-        lower = np.array([bgColor - bgThresh, bgColor - bgThresh, bgColor - bgThresh])
-        upper = np.array([bgColor + bgThresh, bgColor + bgThresh, bgColor + bgThresh])
-        ImgModifier = SampleImgTransformer(
-            image=sampleImg, size=dimensions, lower=lower, upper=upper, bgcolor=bgColor
+
+        image_modifier = SampleImgTransformer(
+            image=sampleImg, bg_color=bgColor, bg_thresh=bgThresh
         )
 
         while count < output_per_sample:
@@ -111,7 +109,7 @@ def augment_data():
             affine_rot_flag = np.less(np.random.uniform(0, 1), aff_rot_prob)
 
             if pers_trans_flag:
-                ImgModifier.perspectiveTransform(
+                image_modifier.perspectiveTransform(
                     maxXangle=maxXangle_Persp,
                     maxYangle=maxYangle_Persp,
                     maxZangle=maxZangle_Persp,
@@ -119,24 +117,25 @@ def augment_data():
                 )
 
             if affine_rot_flag and not pers_trans_flag:
-                ImgModifier.affineRotate(maxXangle=maxAngle_Affine, bgColor=bgColor)
+                image_modifier.affineRotate(maxXangle=maxAngle_Affine, bgColor=bgColor)
 
             if gauss_noise_flag:
-                ImgModifier.addGaussianNoise(noiseMean=0, noiseVariance=2)
+                image_modifier.addGaussianNoise(noiseMean=0, noiseVariance=2)
+                image_modifier.modified_image = np.uint8(image_modifier.modified_image)
 
             if median_noise_flag and not gauss_noise_flag:
                 percent_pixels = 0.02
                 percent_salt = 0.5
-                ImgModifier.addMedianNoise(
+                image_modifier.addMedianNoise(
                     percentPixel=percent_pixels, percentSalt=percent_salt
                 )
 
             if sharpen_flag and not (median_noise_flag) and not (gauss_noise_flag):
-                ImgModifier.sharpenImage()
+                image_modifier.sharpenImage()
 
             if scaling_flag:
                 scale = np.random.uniform(0.5, 1.5)
-                ImgModifier.scaleImage(scale=scale)
+                image_modifier.scaleImage(scale=scale)
 
             if (
                 brightness_flag
@@ -145,9 +144,13 @@ def augment_data():
                 and not (gauss_noise_flag)
             ):
                 scale = np.random.uniform(0.5, 1)
-                ImgModifier.modifybrightness(scale=scale)
+                image_modifier.modifybrightness(scale=scale)
 
-            foregroundPixTight, outImgTight, BoundRect = ImgModifier.getTightBoundbox()
+            (
+                foregroundPixTight,
+                outImgTight,
+                BoundRect,
+            ) = image_modifier.getTightBoundbox()
 
             flag, finalImg, finalBoundRect = place_distorted_sample(
                 outImgTight, foregroundPixTight, BoundRect, bkg_img
@@ -171,7 +174,7 @@ def augment_data():
                 logger.log(logging.INFO, "%s augmented file created", outputName)
                 count = count + 1
 
-            ImgModifier.resetFlags()
+            image_modifier.resetFlags()
 
 
 if __name__ == "__main__":
