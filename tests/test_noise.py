@@ -1,4 +1,4 @@
-import cv2 as cv
+import math
 import numpy as np
 from data_augmentation_yolo.image_transformer import SampleImgTransformer
 import pytest
@@ -24,9 +24,12 @@ def test_median_noise(sample_image):
     count_salt = np.count_nonzero(
         np.sum(image_modifier.modified_image[foregroundPix], -1) == 765
     )
-
-    assert (count_salt + count_pepper) == int(percent_pixel * total_pixel)
-    assert np.round(float(count_salt) / (count_salt + count_pepper), 2) == percent_salt
+    assert math.isclose(
+        (count_salt + count_pepper), (percent_pixel * total_pixel), rel_tol=0.05
+    )
+    assert math.isclose(
+        float(count_salt) / (count_salt + count_pepper), percent_salt, rel_tol=0.05
+    )
 
 
 def test_guassian_noise(sample_image):
@@ -40,6 +43,6 @@ def test_guassian_noise(sample_image):
     diff_pixels = image_modifier.modified_image[indices] - image_modifier.image[indices]
     actual_mean = np.mean(diff_pixels)
     actual_variance = np.var(diff_pixels)
-    assert np.round(actual_mean) == true_mean
-    assert np.round(actual_variance) == true_variance
-    # difference_image=
+    assert math.isclose(actual_mean, true_mean, rel_tol=0.05)
+
+    assert math.isclose(actual_variance, true_variance, rel_tol=0.05)
